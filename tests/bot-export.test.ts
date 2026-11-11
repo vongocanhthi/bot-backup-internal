@@ -6,7 +6,7 @@ import { CHARACTER_INSTRUCTION } from '../lib/bot-export'
 import { parseBotIdentity } from '../lib/bot-identity'
 import { saigonDate } from '../lib/time'
 import { channelSeed } from '../seed/catalog'
-import { addCharacterImage, botExportText, createBot, createCharacter } from '../server/content'
+import { addCharacterImage, botExportText, createBot, createCharacter, saveVoiceSample, updateCharacter } from '../server/content'
 import { createTestDb } from './helpers'
 
 const expected: Record<string, { name: string; title?: string }> = {
@@ -89,4 +89,41 @@ test('config export includes the character section and reference image urls', as
   assert.match(exported.text, /Áo cam #FF6B4A/)
   assert.match(exported.text, /Mặt trước \(nhìn thẳng\): https:\/\/i\.ibb\.co\/example\/cam-front\.png/)
   assert.match(exported.text, /Bạn là Cam Tò Mò Bot\./)
+  assert.match(exported.text, /Luôn dùng đúng giọng đã chốt/)
+})
+
+test('config export includes the character voice', async () => {
+  const bot = await createBot(db, {
+    id: 'bot-voice',
+    name: 'Bot giọng',
+    title: 'Bot giọng',
+    prompt: 'Prompt.',
+  })
+  const character = await createCharacter(db, { botId: bot.id, name: 'Mai', appearance: 'Áo đỏ.' })
+  await updateCharacter(db, character.id, {
+    voiceName: 'Hoài My',
+    voiceProvider: 'edge-tts',
+    voiceGender: 'nu',
+    voiceAge: 'trẻ',
+    voiceAccent: 'nam',
+    voiceSpeed: '1.0',
+    voicePitch: 'ấm',
+    voiceStyle: 'thân thiện',
+    voiceSampleLine: 'Chào cả nhà.',
+  })
+  await saveVoiceSample(db, character.id, {
+    filename: 'hoai-my.wav',
+    contentType: 'audio/wav',
+    bytes: Uint8Array.from([82, 73, 70, 70]),
+  })
+  const exported = await botExportText(db, bot.id)
+  assert.match(exported.text, /Tên giọng: Hoài My/)
+  assert.match(exported.text, /Engine: edge-tts/)
+  assert.match(exported.text, /Giới tính: Nữ/)
+  assert.match(exported.text, /Vùng miền: Nam/)
+  assert.match(exported.text, /Tốc độ: 1\.0/)
+  assert.match(exported.text, /Cao độ: ấm/)
+  assert.match(exported.text, /Cách nói: thân thiện/)
+  assert.match(exported.text, /Câu mẫu: Chào cả nhà\./)
+  assert.match(exported.text, /File nghe mẫu: voices\//)
 })

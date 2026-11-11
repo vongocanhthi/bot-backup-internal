@@ -8,7 +8,7 @@ export const LOGIN_IP_LIMIT = 30
 export const DEFAULT_BOOTSTRAP_EMAIL = 'anhthi199x@gmail.com'
 export const TZ = 'Asia/Saigon'
 export const BACKUP_FORMAT = 'qlk-backup'
-export const BACKUP_VERSION = 1
+export const BACKUP_VERSION = 2
 export const RESTORE_CONFIRM = 'KHOI PHUC'
 export const IMPORT_TOKEN_PREFIX = 'qlkimp_'
 

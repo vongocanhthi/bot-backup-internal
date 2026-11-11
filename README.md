@@ -90,6 +90,16 @@ Seed không ghi đè kênh, slot, bot hay nhân vật đã có. `SEED_OVERWRITE=
 
 `POST /api/import` với Bearer token trả về `{ snapshotId, importedAt, postCount }`.
 
+## Giọng nhân vật
+
+Mỗi nhân vật có thể lưu giọng để tài khoản Grok khác dựng lại đúng âm: tên giọng, engine, giới tính, tuổi, vùng miền (Bắc/Trung/Nam), tốc độ, cao độ, cách nói, câu mẫu, và một file nghe mẫu tùy chọn.
+
+File nghe mẫu lưu trong Postgres (`character_voice_samples`, tối đa 4 MB mỗi file: MP3, WAV, WEBM, OGG, M4A). Không dùng imgbb vì dịch vụ đó chỉ nhận ảnh, và không thêm kho Blob nên không có biến môi trường mới. Bản sao lưu zip gồm `characters.json` và thư mục `voices/`. Khi copy hoặc tải cấu hình bot, mục Nhân vật kèm các thông số giọng.
+
+Sau khi cập nhật mã, chạy `npm run migrate` trên database đang dùng. Dữ liệu nhân vật cũ giữ nguyên; các cột giọng để trống cho đến khi nhập.
+
+Vercel giới hạn body request khoảng 4,5 MB. File mẫu nên là một câu ngắn. Bản sao lưu có nhiều file lớn có thể vượt giới hạn đó khi tải lên từ trang web.
+
 ## Lệnh
 
 ```bash

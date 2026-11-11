@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
-import { exportBackup, restoreBackup } from '../server/backup'
+import JSZip from 'jszip'
+import { backupZip, exportBackup, parseBackup, readBackupBundle, restoreBackup } from '../server/backup'
 import { createChannel, getChannelByCode } from '../server/channels'
-import { addCharacterImage, createBot, createCharacter } from '../server/content'
+import { addCharacterImage, createBot, createCharacter, getVoiceAudio, saveVoiceSample, updateCharacter } from '../server/content'
 import { ingestSnapshot } from '../server/snapshots'
 import { createTestDb } from './helpers'
 
@@ -47,4 +48,52 @@ test('backup roundtrip keeps channel codes and character image urls and omits se
   const again = await exportBackup(db)
   assert.equal(again.characterImages[0]?.url, 'https://i.ibb.co/example/full.png')
   assert.equal(again.posts.length, 1)
+})
+
+test('a version 1 backup without voice fields still restores', () => {
+  const parsed = parseBackup({
+    format: 'qlk-backup',
+    version: 1,
+    channels: [],
+    slots: [],
+    snapshots: [],
+    posts: [],
+    bots: [],
+    characters: [],
+    characterImages: [],
+  })
+  assert.equal(parsed.characters.length, 0)
+})
+
+test('backup zip keeps the character voice and audio file', async () => {
+  const bot = await createBot(db, { id: 'bot-voice-backup', name: 'Bot', title: 'Bot', prompt: 'Prompt.' })
+  const character = await createCharacter(db, { botId: bot.id, name: 'Mai', appearance: 'Áo đỏ.' })
+  await updateCharacter(db, character.id, {
+    voiceName: 'Hoài My',
+    voiceProvider: 'edge-tts',
+    voiceAccent: 'nam',
+    voiceSampleLine: 'Chào cả nhà.',
+  })
+  const wav = Uint8Array.from([82, 73, 70, 70, 1, 2, 3, 4])
+  await saveVoiceSample(db, character.id, { filename: 'hoai-my.wav', contentType: 'audio/wav', bytes: wav })
+  const zipBytes = await backupZip(db)
+  const zip = await JSZip.loadAsync(zipBytes)
+  const charactersFile = zip.file('characters.json')
+  assert.ok(charactersFile)
+  const charactersJson = await charactersFile.async('string')
+  assert.match(charactersJson, /Hoài My/)
+  assert.match(charactersJson, /Chào cả nhà\./)
+  const audioEntry = zip.file(`voices/${character.id}.wav`)
+  assert.ok(audioEntry)
+  const audio = await audioEntry.async('uint8array')
+  assert.deepEqual(Array.from(audio), Array.from(wav))
+  const bundle = await readBackupBundle(zipBytes, 'sao-luu.zip')
+  await restoreBackup(db, bundle.data, bundle.voices)
+  const saved = await getVoiceAudio(db, character.id)
+  assert.ok(saved)
+  assert.deepEqual(Array.from(saved.bytes), Array.from(wav))
+  const again = await exportBackup(db)
+  const restoredCharacter = again.characters.find((item) => item.id === character.id)
+  assert.equal(restoredCharacter?.voice.name, 'Hoài My')
+  assert.equal(restoredCharacter?.voice.sampleLine, 'Chào cả nhà.')
 })

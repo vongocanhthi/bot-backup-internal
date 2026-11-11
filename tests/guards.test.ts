@@ -20,6 +20,7 @@ const adminRoutes = [
   'app/api/characters/route.ts',
   'app/api/characters/[id]/route.ts',
   'app/api/characters/[id]/images/route.ts',
+  'app/api/characters/[id]/voice/route.ts',
   'app/api/character-images/[id]/route.ts',
   'app/api/backup/restore/route.ts',
 ]

@@ -80,10 +80,27 @@ try {
       character.botId,
       character.name,
     ])
-    if (existing.rows.length > 0) continue
+    if (existing.rows.length > 0) {
+      await db.query(
+        `UPDATE characters
+         SET voice_name = $3, voice_provider = $4, voice_style = $5, updated_at = now()
+         WHERE bot_id = $1 AND name = $2 AND voice_name IS NULL`,
+        [character.botId, character.name, character.voiceName, character.voiceProvider, character.voiceStyle],
+      )
+      continue
+    }
     await db.query(
-      `INSERT INTO characters (id, bot_id, name, appearance, sort_order) VALUES ($1, $2, $3, $4, 0)`,
-      [randomUUID(), character.botId, character.name, character.appearance],
+      `INSERT INTO characters (id, bot_id, name, appearance, sort_order, voice_name, voice_provider, voice_style)
+       VALUES ($1, $2, $3, $4, 0, $5, $6, $7)`,
+      [
+        randomUUID(),
+        character.botId,
+        character.name,
+        character.appearance,
+        character.voiceName,
+        character.voiceProvider,
+        character.voiceStyle,
+      ],
     )
   }
   const boot = await ensureBootstrapAdmin(db)
