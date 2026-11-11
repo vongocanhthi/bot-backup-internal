@@ -80,7 +80,8 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .tabs { flex-wrap: wrap; margin: 8px 0 20px; }
 
-.tabs a {
+.tabs a,
+.menu-tabs a {
   text-decoration: none;
   color: var(--ink);
   background: var(--surface);
@@ -89,7 +90,41 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   padding: 8px 12px;
 }
 
-.tabs a[aria-current="page"] { background: var(--accent); color: white; border-color: var(--accent); }
+.tabs a[aria-current="page"],
+.menu-tabs a[aria-current="page"] { background: var(--accent); color: white; border-color: var(--accent); }
+
+.menu-scroll {
+  margin: 0 0 20px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.menu-tabs {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  min-width: 100%;
+  padding: 2px 2px 8px;
+}
+
+.menu-tabs a {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
 
 .content h1 { margin: 0 0 8px; font-size: 1.6rem; }
 
