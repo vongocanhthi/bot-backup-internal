@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { CopyButton } from '@/components/CopyButton'
 import { NewBotForm } from '@/components/BotEditor'
 import { listBots } from '@/server/content'
@@ -9,8 +10,7 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Cấu hình bot' }
 
 export default async function BotsPage() {
-  const session = await getSession()
-  const bots = await listBots(getDb())
+  const [session, bots] = await Promise.all([getSession(), listBots(getDb())])
   return (
     <div className="stack">
       <header>
@@ -38,7 +38,9 @@ export default async function BotsPage() {
                 <td>{bot.title}</td>
                 <td>{formatDateTimeInSaigon(bot.updatedAt)}</td>
                 <td className="actions">
-                  <a href={`/bot/${bot.id}`}>Xem</a>
+                  <Link href={`/bot/${bot.id}`} prefetch>
+                    Xem
+                  </Link>
                   <CopyButton url={`/api/bots/${bot.id}/export`} />
                   <a href={`/api/bots/${bot.id}/export`}>Tải .txt</a>
                 </td>

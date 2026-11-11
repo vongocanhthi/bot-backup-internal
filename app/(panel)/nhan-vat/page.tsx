@@ -9,8 +9,11 @@ export const metadata = { title: 'Nhân vật' }
 export default async function CharactersPage({ searchParams }: { searchParams: Promise<{ bot?: string }> }) {
   const params = await searchParams
   const db = getDb()
-  const session = await getSession()
-  const [bots, characters] = await Promise.all([listBots(db), listCharacters(db, params.bot || null)])
+  const [session, bots, characters] = await Promise.all([
+    getSession(),
+    listBots(db),
+    listCharacters(db, params.bot || null),
+  ])
   return (
     <div className="stack">
       <header>
