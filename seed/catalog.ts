@@ -196,11 +196,17 @@ export const characterSeed = [
     name: 'Cam',
     appearance:
       'Linh vật cố định của page Cam Tò Mò, tên Cam. Người que/stickman áo cam. Màu khóa: áo #FF6B4A, da #FFE0C4, quần #2B2D42, viền #1D1D2B, nền cream #FFF8F0, soft orange #FFD3BF. Rig có chớp mắt, miệng và tay. Phong cách Remotion + SVG 2D. Không đổi bảng màu Cam giữa các video.',
+    voiceName: 'Ngọc Huyền',
+    voiceProvider: 'VieNeu',
+    voiceStyle: 'Giọng dẫn mặc định của page Cam Tò Mò.',
   },
   {
     botId: '008dfbb6-77f2-4f50-8a6a-812ea7e95168',
     name: 'Nhân vật chính',
     appearance:
       'Nhân vật chính (bản đề xuất 01, chưa đặt tên). Đầu tròn, mắt chấm, tóc đen ba chỏm lệch, áo xanh ngọc có túi nhỏ, quần xanh đậm. Phong cách hoạt hình 2D phẳng doodle/stickman vẽ bằng Remotion + SVG. Không đổi các điểm ngoại hình này giữa các video.',
+    voiceName: 'Hải Đăng',
+    voiceProvider: 'preset giọng local',
+    voiceStyle: 'Giọng duy nhất cho toàn bộ lời dẫn và nhân vật. Không dùng Ngọc Huyền.',
   },
 ] as const

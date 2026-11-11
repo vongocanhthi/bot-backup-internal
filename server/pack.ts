@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
 import { renderCharacterMarkdown } from '../lib/bot-export'
+import { toExportVoice } from './content'
 import { kindLabel } from '../lib/labels'
 import { safeFilePart } from '../lib/slug'
 import { assertPublicHttpsUrl } from '../lib/urls'
@@ -7,7 +8,10 @@ import type { Character } from '../lib/types'
 
 const MAX_IMAGE_BYTES = 8_000_000
 
-export async function buildCharacterPack(character: Character): Promise<Uint8Array> {
+export async function buildCharacterPack(
+  character: Character,
+  audio?: { filename: string; bytes: Uint8Array } | null,
+): Promise<Uint8Array> {
   const zip = new JSZip()
   const files: { label: string; url: string; file?: string }[] = []
   const folder = zip.folder('images')
@@ -24,11 +28,16 @@ export async function buildCharacterPack(character: Character): Promise<Uint8Arr
     }
     index += 1
   }
+  if (audio) zip.file(`voices/${audio.filename}`, audio.bytes)
   const markdown = [
     renderCharacterMarkdown({
       name: character.name,
       appearance: character.appearance,
       images: character.images.map((image) => ({ kind: image.kind, label: image.label, url: image.url })),
+      voice: {
+        ...toExportVoice(character),
+        sampleFile: audio ? `voices/${audio.filename}` : toExportVoice(character).sampleFile,
+      },
     }).trimEnd(),
     '',
     '## File trong gói',

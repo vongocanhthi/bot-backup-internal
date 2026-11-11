@@ -61,6 +61,19 @@ export type CharacterImage = {
   createdAt: string
 }
 
+export type CharacterVoice = {
+  name: string | null
+  provider: string | null
+  gender: string | null
+  age: string | null
+  accent: string | null
+  speed: string | null
+  pitch: string | null
+  style: string | null
+  sampleLine: string | null
+  sample: { filename: string; contentType: string; byteSize: number } | null
+}
+
 export type Character = {
   id: string
   botId: string
@@ -68,6 +81,7 @@ export type Character = {
   appearance: string
   sortOrder: number
   images: CharacterImage[]
+  voice: CharacterVoice
 }
 
 export type SnapshotMeta = {
