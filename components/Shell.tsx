@@ -17,19 +17,21 @@ export function Shell({
       <a className="skip" href="#noi-dung">
         Đến nội dung
       </a>
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Nội bộ</p>
-          <p className="brand">Quản lý lịch kênh (nội bộ)</p>
-          <p className="muted">
-            {user.email} · {user.isAdmin ? 'Quản trị' : 'Chỉ xem'}
-          </p>
+      <div className="app-frame">
+        <aside className="sidebar">
+          <div className="side-brand">
+            <p className="eyebrow">Nội bộ</p>
+            <p className="brand">Quản lý lịch kênh (nội bộ)</p>
+            <p className="muted">
+              {user.email} · {user.isAdmin ? 'Quản trị' : 'Chỉ xem'}
+            </p>
+          </div>
+          <Nav isAdmin={user.isAdmin} />
+          <LogoutButton csrf={csrf} />
+        </aside>
+        <div id="noi-dung" className="content">
+          {children}
         </div>
-        <LogoutButton csrf={csrf} />
-      </header>
-      <Nav isAdmin={user.isAdmin} />
-      <div id="noi-dung" className="content">
-        {children}
       </div>
     </div>
   )

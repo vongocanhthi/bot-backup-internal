@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect } from 'react'
 
 const LINKS = [
   { href: '/', label: 'Lịch' },
@@ -10,6 +11,31 @@ const LINKS = [
   { href: '/nhan-vat', label: 'Nhân vật' },
   { href: '/doi-mat-khau', label: 'Đổi mật khẩu' },
 ]
+
+function isCurrent(pathname: string, href: string) {
+  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
+}
+
+function TabList({
+  items,
+  pathname,
+}: {
+  items: { href: string; label: string }[]
+  pathname: string
+}) {
+  return (
+    <div className="menu-tabs">
+      {items.map((item) => {
+        const current = isCurrent(pathname, item.href)
+        return (
+          <Link key={item.href} href={item.href} aria-current={current ? 'page' : undefined}>
+            {item.label}
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
 
 export function Nav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname()
@@ -22,16 +48,26 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
         ]
       : []),
   ]
+  const currentLabel = items.find((item) => isCurrent(pathname, item.href))?.label ?? 'Menu'
+
+  useEffect(() => {
+    const selected = document.querySelectorAll<HTMLAnchorElement>('.menu-tabs a[aria-current="page"]')
+    selected.forEach((node) => {
+      if (node.offsetParent) node.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+    })
+  }, [pathname])
+
   return (
-    <nav className="tabs" aria-label="Mục chính">
-      {items.map((item) => {
-        const current = item.href === '/' ? pathname === '/' : pathname === item.href || pathname.startsWith(`${item.href}/`)
-        return (
-          <Link key={item.href} href={item.href} aria-current={current ? 'page' : undefined}>
-            {item.label}
-          </Link>
-        )
-      })}
-    </nav>
+    <>
+      <nav className="menu-desktop" aria-label="Mục chính">
+        <TabList items={items} pathname={pathname} />
+      </nav>
+      <details className="menu-disclosure">
+        <summary>Mục quản lý · {currentLabel}</summary>
+        <nav className="menu-scroll" aria-label="Mục chính">
+          <TabList items={items} pathname={pathname} />
+        </nav>
+      </details>
+    </>
   )
 }
