@@ -12,7 +12,7 @@ export function poolConfig(url: string) {
   const local = /@(localhost|127\.0\.0\.1)(:|\/)/.test(url)
   return {
     connectionString: url,
-    max: 1,
+    max: 5,
     idleTimeoutMillis: 10_000,
     ssl: local ? undefined : { rejectUnauthorized: false },
   }
