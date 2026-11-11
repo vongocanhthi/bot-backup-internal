@@ -1,7 +1,8 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { BotEditor } from '@/components/BotEditor'
 import { CopyButton } from '@/components/CopyButton'
-import { botExportText, listCharacters } from '@/server/content'
+import { botExportText } from '@/server/content'
 import { getDb } from '@/server/pool'
 import { getSession } from '@/server/session'
 
@@ -15,10 +16,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function BotPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const db = getDb()
-  const session = await getSession()
-  const exported = await botExportText(db, decodeURIComponent(id)).catch(() => null)
+  const [session, exported] = await Promise.all([
+    getSession(),
+    botExportText(db, decodeURIComponent(id)).catch(() => null),
+  ])
   if (!exported) notFound()
-  const characters = await listCharacters(db, exported.bot.id)
+  const characters = exported.characters
   return (
     <div className="stack">
       <header>
@@ -47,7 +50,10 @@ export default async function BotPage({ params }: { params: Promise<{ id: string
         <ul>
           {characters.map((character) => (
             <li key={character.id}>
-              <a href={`/nhan-vat?bot=${character.botId}`}>{character.name}</a> · {character.images.length} ảnh
+              <Link href={`/nhan-vat?bot=${character.botId}`} prefetch>
+                {character.name}
+              </Link>{' '}
+              · {character.images.length} ảnh
             </li>
           ))}
         </ul>

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { ScheduleView } from '@/components/ScheduleView'
 import { SnapshotTools } from '@/components/SnapshotTools'
 import { formatDateTimeInSaigon, addIsoDays, todayInSaigon } from '@/lib/time'
@@ -20,13 +21,15 @@ export default async function SchedulePage({
   const to = view === 'today' ? today : addIsoDays(today, 6)
   const db = getDb()
   const session = await getSession()
-  const data = await getSchedule(db, {
-    from,
-    to,
-    channelCode: view === 'channel' ? params.channel || null : null,
-    snapshotId: params.snapshot || null,
-  })
-  const tokens = session?.user.isAdmin ? await listImportTokens(db) : []
+  const [data, tokens] = await Promise.all([
+    getSchedule(db, {
+      from,
+      to,
+      channelCode: view === 'channel' ? params.channel || null : null,
+      snapshotId: params.snapshot || null,
+    }),
+    session?.user.isAdmin ? listImportTokens(db) : Promise.resolve([]),
+  ])
   const snapshot = data.snapshot
 
   return (
@@ -56,15 +59,19 @@ export default async function SchedulePage({
         )}
       </section>
       <div className="tabs" aria-label="Khoảng lịch">
-        <a href="/" aria-current={view === 'today' ? 'page' : undefined}>
+        <Link href="/" prefetch aria-current={view === 'today' ? 'page' : undefined}>
           Hôm nay
-        </a>
-        <a href="/?view=week" aria-current={view === 'week' ? 'page' : undefined}>
+        </Link>
+        <Link href="/?view=week" prefetch aria-current={view === 'week' ? 'page' : undefined}>
           7 ngày tới
-        </a>
-        <a href={`/?view=channel${params.channel ? `&channel=${params.channel}` : ''}`} aria-current={view === 'channel' ? 'page' : undefined}>
+        </Link>
+        <Link
+          href={`/?view=channel${params.channel ? `&channel=${params.channel}` : ''}`}
+          prefetch
+          aria-current={view === 'channel' ? 'page' : undefined}
+        >
           Theo kênh
-        </a>
+        </Link>
       </div>
       {view === 'channel' ? (
         <form className="actions" action="/" method="get">

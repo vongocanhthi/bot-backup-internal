@@ -93,13 +93,15 @@ export async function updateBot(
 }
 
 export async function listCharacters(db: Db, botId?: string | null): Promise<Character[]> {
-  const characters = await db.query(
-    `SELECT * FROM characters
-     WHERE ($1::text IS NULL OR bot_id = $1)
-     ORDER BY sort_order ASC, name ASC`,
-    [botId ?? null],
-  )
-  const images = await db.query(`SELECT * FROM character_images ORDER BY created_at ASC`)
+  const [characters, images] = await Promise.all([
+    db.query(
+      `SELECT * FROM characters
+       WHERE ($1::text IS NULL OR bot_id = $1)
+       ORDER BY sort_order ASC, name ASC`,
+      [botId ?? null],
+    ),
+    db.query(`SELECT * FROM character_images ORDER BY created_at ASC`),
+  ])
   const grouped = new Map<string, CharacterImage[]>()
   for (const row of images.rows) {
     const image = mapImage(row)
@@ -199,14 +201,13 @@ export async function deleteCharacterImage(db: Db, id: string) {
   await db.query(`DELETE FROM character_images WHERE id = $1`, [id])
 }
 
-export async function botExportText(db: Db, id: string): Promise<{ bot: Bot; text: string }> {
-  const bot = await getBot(db, id)
+export async function botExportText(db: Db, id: string): Promise<{ bot: Bot; text: string; characters: Character[] }> {
+  const [bot, characters] = await Promise.all([getBot(db, id), listCharacters(db, id)])
   if (!bot) throw new HttpError('Không tìm thấy bot.', 404)
-  const characters = await listCharacters(db, id)
   const exportCharacters: ExportCharacter[] = characters.map((character) => ({
     name: character.name,
     appearance: character.appearance,
     images: character.images.map((image) => ({ kind: image.kind, label: image.label, url: image.url })),
   }))
-  return { bot, text: renderBotExport(bot, exportCharacters) }
+  return { bot, text: renderBotExport(bot, exportCharacters), characters }
 }
