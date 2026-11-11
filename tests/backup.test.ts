@@ -3,7 +3,7 @@ import { after, before, test } from 'node:test'
 import JSZip from 'jszip'
 import { backupZip, exportBackup, parseBackup, readBackupBundle, restoreBackup } from '../server/backup'
 import { createChannel, getChannelByCode } from '../server/channels'
-import { addCharacterImage, createBot, createCharacter, getVoiceAudio, saveVoiceSample, updateCharacter } from '../server/content'
+import { addCharacterImage, createBot, createCharacter, getSourceFile, getVoiceAudio, saveSourceFile, saveVoiceSample, updateCharacter } from '../server/content'
 import { ingestSnapshot } from '../server/snapshots'
 import { createTestDb } from './helpers'
 
@@ -58,11 +58,20 @@ test('a version 1 backup without voice fields still restores', () => {
     slots: [],
     snapshots: [],
     posts: [],
-    bots: [],
-    characters: [],
+    bots: [{ id: 'bot-old', name: 'Bot', title: 'Bot', prompt: 'Cũ.' }],
+    characters: [
+      {
+        id: '11111111-1111-4111-8111-111111111111',
+        botId: 'bot-old',
+        name: 'Cũ',
+        appearance: 'Mô tả cũ.',
+      },
+    ],
     characterImages: [],
   })
-  assert.equal(parsed.characters.length, 0)
+  assert.equal(parsed.characters.length, 1)
+  assert.equal(parsed.characters[0]?.sourceFiles.length, 0)
+  assert.equal(parsed.characters[0]?.voice.name, null)
 })
 
 test('backup zip keeps the character voice and audio file', async () => {
@@ -96,4 +105,33 @@ test('backup zip keeps the character voice and audio file', async () => {
   const restoredCharacter = again.characters.find((item) => item.id === character.id)
   assert.equal(restoredCharacter?.voice.name, 'Hoài My')
   assert.equal(restoredCharacter?.voice.sampleLine, 'Chào cả nhà.')
+})
+
+test('backup zip keeps character source packages and older backups still parse', async () => {
+  const bot = await createBot(db, { id: 'bot-source-backup', name: 'Bot', title: 'Bot', prompt: 'Prompt.' })
+  const character = await createCharacter(db, { botId: bot.id, name: 'Cam', appearance: 'Áo cam.' })
+  const payload = Uint8Array.from([80, 75, 3, 4, 9, 8, 7])
+  await saveSourceFile(db, character.id, {
+    filename: 'cam-remotion.zip',
+    contentType: 'application/octet-stream',
+    bytes: payload,
+    note: 'Sprite + CamSprite.tsx',
+  })
+  const zipBytes = await backupZip(db)
+  const zip = await JSZip.loadAsync(zipBytes)
+  const entry = zip.file(`sources/${character.id}/cam-remotion.zip`)
+  assert.ok(entry)
+  assert.deepEqual(Array.from(await entry.async('uint8array')), Array.from(payload))
+  const charactersJson = await zip.file('characters.json')!.async('string')
+  assert.match(charactersJson, /sources\/.+\/cam-remotion\.zip/)
+  assert.match(charactersJson, /Sprite \+ CamSprite\.tsx/)
+  const bundle = await readBackupBundle(zipBytes, 'sao-luu.zip')
+  await restoreBackup(db, bundle.data, bundle.voices, bundle.sources)
+  const again = await exportBackup(db)
+  const restored = again.characters.find((item) => item.id === character.id)
+  assert.equal(restored?.sourceFiles[0]?.filename, 'cam-remotion.zip')
+  assert.equal(restored?.sourceFiles[0]?.note, 'Sprite + CamSprite.tsx')
+  const saved = await getSourceFile(db, character.id, restored!.sourceFiles[0]!.id)
+  assert.ok(saved)
+  assert.deepEqual(Array.from(saved.bytes), Array.from(payload))
 })

@@ -18,6 +18,6 @@ export const POST = api(async (req) => {
   if (!(file instanceof File)) throw new HttpError('Thiếu tệp sao lưu.', 400)
   const bytes = new Uint8Array(await file.arrayBuffer())
   const bundle = await readBackupBundle(bytes, file.name)
-  const result = await restoreBackup(getDb(), bundle.data, bundle.voices)
+  const result = await restoreBackup(getDb(), bundle.data, bundle.voices, bundle.sources)
   return json({ ok: true, ...result })
 })

@@ -6,7 +6,7 @@ import { CHARACTER_INSTRUCTION } from '../lib/bot-export'
 import { parseBotIdentity } from '../lib/bot-identity'
 import { saigonDate } from '../lib/time'
 import { channelSeed } from '../seed/catalog'
-import { addCharacterImage, botExportText, createBot, createCharacter, saveVoiceSample, updateCharacter } from '../server/content'
+import { addCharacterImage, botExportText, createBot, createCharacter, saveSourceFile, saveVoiceSample, updateCharacter } from '../server/content'
 import { createTestDb } from './helpers'
 
 const expected: Record<string, { name: string; title?: string }> = {
@@ -126,4 +126,13 @@ test('config export includes the character voice', async () => {
   assert.match(exported.text, /Cách nói: thân thiện/)
   assert.match(exported.text, /Câu mẫu: Chào cả nhà\./)
   assert.match(exported.text, /File nghe mẫu: voices\//)
+  await saveSourceFile(db, character.id, {
+    filename: 'mai-remotion.zip',
+    contentType: 'application/zip',
+    bytes: Uint8Array.from([80, 75, 3, 4]),
+    note: 'Dự án Remotion',
+  })
+  const withSource = await botExportText(db, bot.id)
+  assert.match(withSource.text, /File gốc \(Remotion\/SVG\/sprite\):/)
+  assert.match(withSource.text, /mai-remotion\.zip — Dự án Remotion/)
 })

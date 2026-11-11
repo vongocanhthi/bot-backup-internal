@@ -98,6 +98,14 @@ File nghe mẫu lưu trong Postgres (`character_voice_samples`, tối đa 4 MB m
 
 Sau khi cập nhật mã, chạy `npm run migrate` trên database đang dùng. Dữ liệu nhân vật cũ giữ nguyên; các cột giọng để trống cho đến khi nhập.
 
+## File gốc nhân vật
+
+Mỗi nhân vật có thể lưu một hoặc nhiều file gốc để dựng lại hoạt hình trên tài khoản Grok khác: zip dự án Remotion (sprite PNG, manifest, component, palette, font, README), hoặc file `.json` / `.txt` đi kèm. File nằm trong Postgres (`character_source_files`, migration `003_character_source_files.sql`), tối đa 4 MB mỗi file. Không thêm biến môi trường.
+
+Bản sao lưu zip đặt file tại `sources/<mã nhân vật>/<tên file>` và ghi đường dẫn trong `characters.json`. Bản sao lưu cũ không có mục này vẫn khôi phục được. Khi copy hoặc tải cấu hình bot, mục nhân vật liệt kê tên các file gốc.
+
+Nhãn kết nối Buffer được phép: `anhthi199x`, `anhthimxh`, `anhthimusics`, `voanhviet77`, `yenkiem2000`.
+
 Vercel giới hạn body request khoảng 4,5 MB. File mẫu nên là một câu ngắn. Bản sao lưu có nhiều file lớn có thể vượt giới hạn đó khi tải lên từ trang web.
 
 ## Lệnh

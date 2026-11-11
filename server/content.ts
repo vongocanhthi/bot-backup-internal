@@ -4,10 +4,11 @@ import { HttpError } from '../lib/http-error'
 import { IMAGE_KINDS, type ImageKind } from '../lib/constants'
 import { renderBotExport, type ExportCharacter, type ExportVoice } from '../lib/bot-export'
 import { isVoiceAudioType, MAX_VOICE_BYTES, VOICE_ACCENTS, VOICE_GENDERS, voiceFilePath } from '../lib/voice'
+import { describeSourceUpload, sourceFilePath } from '../lib/source-files'
 import { asInt, asIso, blank } from '../lib/rows'
 import { isBotId } from '../lib/slug'
 import { assertPublicHttpsUrl } from '../lib/urls'
-import type { Bot, Character, CharacterImage, CharacterVoice } from '../lib/types'
+import type { Bot, Character, CharacterImage, CharacterSourceFile, CharacterVoice } from '../lib/types'
 
 function textField(value: unknown, field: string, max: number, required = true): string {
   if (typeof value !== 'string') throw new HttpError(`${field} không hợp lệ.`, 400)
@@ -130,7 +131,7 @@ export function toExportVoice(character: Character): ExportVoice {
 }
 
 export async function listCharacters(db: Db, botId?: string | null): Promise<Character[]> {
-  const [characters, images, samples] = await Promise.all([
+  const [characters, images, samples, sourceRows] = await Promise.all([
     db.query(
       `SELECT * FROM characters
        WHERE ($1::text IS NULL OR bot_id = $1)
@@ -139,8 +140,28 @@ export async function listCharacters(db: Db, botId?: string | null): Promise<Cha
     ),
     db.query(`SELECT * FROM character_images ORDER BY created_at ASC`),
     db.query(`SELECT character_id, filename, content_type, byte_size FROM character_voice_samples`),
+    db.query(
+      `SELECT id, character_id, filename, content_type, byte_size, note, created_at
+       FROM character_source_files
+       ORDER BY created_at ASC`,
+    ),
   ])
   const sampleByCharacter = new Map(samples.rows.map((row) => [String(row.character_id), row]))
+  const sourcesByCharacter = new Map<string, CharacterSourceFile[]>()
+  for (const row of sourceRows.rows) {
+    const characterId = String(row.character_id)
+    const list = sourcesByCharacter.get(characterId) ?? []
+    list.push({
+      id: String(row.id),
+      characterId,
+      filename: String(row.filename),
+      contentType: String(row.content_type),
+      byteSize: asInt(row.byte_size) ?? 0,
+      note: blank(row.note == null ? null : String(row.note)),
+      createdAt: asIso(row.created_at) ?? new Date(0).toISOString(),
+    })
+    sourcesByCharacter.set(characterId, list)
+  }
   const grouped = new Map<string, CharacterImage[]>()
   for (const row of images.rows) {
     const image = mapImage(row)
@@ -157,6 +178,7 @@ export async function listCharacters(db: Db, botId?: string | null): Promise<Cha
     sortOrder: asInt(row.sort_order) ?? 0,
     images: (grouped.get(String(row.id)) ?? []).sort((a, b) => (kindOrder[a.kind] ?? 9) - (kindOrder[b.kind] ?? 9)),
     voice: mapVoice(row, sampleByCharacter.get(String(row.id))),
+    sourceFiles: sourcesByCharacter.get(String(row.id)) ?? [],
   }))
 }
 
@@ -313,6 +335,7 @@ export async function botExportText(db: Db, id: string): Promise<{ bot: Bot; tex
     appearance: character.appearance,
     images: character.images.map((image) => ({ kind: image.kind, label: image.label, url: image.url })),
     voice: toExportVoice(character),
+    sourceFiles: character.sourceFiles.map((file) => ({ filename: file.filename, note: file.note })),
   }))
   return { bot, text: renderBotExport(bot, exportCharacters), characters }
 }
@@ -356,6 +379,61 @@ export async function deleteVoiceSample(db: Db, characterId: string) {
   const character = await getCharacter(db, characterId)
   if (!character) throw new HttpError('Không tìm thấy nhân vật.', 404)
   await db.query(`DELETE FROM character_voice_samples WHERE character_id = $1`, [characterId])
+}
+
+export async function saveSourceFile(
+  db: Db,
+  characterId: string,
+  file: { filename: string; contentType: string; bytes: Uint8Array; note: string | null },
+) {
+  const character = await getCharacter(db, characterId)
+  if (!character) throw new HttpError('Không tìm thấy nhân vật.', 404)
+  const described = describeSourceUpload(file.filename, file.contentType, file.bytes.byteLength)
+  const note = file.note?.trim() || null
+  if (note && note.length > 500) throw new HttpError('Ghi chú file gốc quá dài.', 400)
+  const id = randomUUID()
+  try {
+    await db.query(
+      `INSERT INTO character_source_files (id, character_id, filename, content_type, byte_size, data, note)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [id, characterId, described.filename, described.contentType, file.bytes.byteLength, Buffer.from(file.bytes), note],
+    )
+  } catch (error) {
+    const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
+    if (code === '23505') throw new HttpError('Nhân vật này đã có file cùng tên.', 400)
+    throw error
+  }
+}
+
+export async function deleteSourceFile(db: Db, characterId: string, fileId: string) {
+  const found = await db.query(`SELECT id FROM character_source_files WHERE id = $1 AND character_id = $2`, [
+    fileId,
+    characterId,
+  ])
+  if (found.rows.length === 0) throw new HttpError('Không tìm thấy file gốc.', 404)
+  await db.query(`DELETE FROM character_source_files WHERE id = $1`, [fileId])
+}
+
+export async function listSourceFileBytes(db: Db, characterId: string) {
+  const result = await db.query(
+    `SELECT filename, data FROM character_source_files WHERE character_id = $1 ORDER BY created_at ASC`,
+    [characterId],
+  )
+  return result.rows.map((row) => ({ filename: String(row.filename), bytes: audioBytes(row.data) }))
+}
+
+export async function getSourceFile(db: Db, characterId: string, fileId: string) {
+  const result = await db.query(
+    `SELECT filename, content_type, data FROM character_source_files WHERE id = $1 AND character_id = $2`,
+    [fileId, characterId],
+  )
+  const row = result.rows[0]
+  if (!row) return null
+  return {
+    filename: String(row.filename),
+    contentType: String(row.content_type),
+    bytes: audioBytes(row.data),
+  }
 }
 
 export async function getVoiceAudio(db: Db, characterId: string) {

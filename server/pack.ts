@@ -11,6 +11,7 @@ const MAX_IMAGE_BYTES = 8_000_000
 export async function buildCharacterPack(
   character: Character,
   audio?: { filename: string; bytes: Uint8Array } | null,
+  sources: { filename: string; bytes: Uint8Array }[] = [],
 ): Promise<Uint8Array> {
   const zip = new JSZip()
   const files: { label: string; url: string; file?: string }[] = []
@@ -29,6 +30,7 @@ export async function buildCharacterPack(
     index += 1
   }
   if (audio) zip.file(`voices/${audio.filename}`, audio.bytes)
+  for (const source of sources) zip.file(`sources/${source.filename}`, source.bytes)
   const markdown = [
     renderCharacterMarkdown({
       name: character.name,
@@ -38,10 +40,12 @@ export async function buildCharacterPack(
         ...toExportVoice(character),
         sampleFile: audio ? `voices/${audio.filename}` : toExportVoice(character).sampleFile,
       },
+      sourceFiles: character.sourceFiles.map((file) => ({ filename: file.filename, note: file.note })),
     }).trimEnd(),
     '',
     '## File trong gói',
     ...files.map((file) => `- ${file.label}: ${file.url}${file.file ? ` (file: ${file.file})` : ' (không tải được file, dùng URL)'}`),
+    ...sources.map((file) => `- File gốc: sources/${file.filename}`),
     '',
   ].join('\n')
   zip.file('nhan-vat.md', markdown)

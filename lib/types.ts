@@ -74,6 +74,16 @@ export type CharacterVoice = {
   sample: { filename: string; contentType: string; byteSize: number } | null
 }
 
+export type CharacterSourceFile = {
+  id: string
+  characterId: string
+  filename: string
+  contentType: string
+  byteSize: number
+  note: string | null
+  createdAt: string
+}
+
 export type Character = {
   id: string
   botId: string
@@ -82,6 +92,7 @@ export type Character = {
   sortOrder: number
   images: CharacterImage[]
   voice: CharacterVoice
+  sourceFiles: CharacterSourceFile[]
 }
 
 export type SnapshotMeta = {

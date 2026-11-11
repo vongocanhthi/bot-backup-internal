@@ -35,6 +35,14 @@ test('renaming a channel keeps the stable code', async () => {
   assert.equal(await getChannelByCode(db, 'ma-khac'), null)
 })
 
+test('known Buffer connection labels including the extra accounts are accepted', async () => {
+  for (const label of ['anhthimusics', 'voanhviet77', 'yenkiem2000'] as const) {
+    const channel = await createChannel(db, { name: label, connectionLabel: label })
+    assert.equal(channel.connectionLabel, label)
+  }
+  await assert.rejects(() => createChannel(db, { name: 'Lạ', connectionLabel: 'khong-co' }))
+})
+
 test('a supplied duplicate code is rejected and a generated code stays after rename', async () => {
   await createChannel(db, { name: 'Kênh A', code: 'kenh-a' })
   await assert.rejects(() => createChannel(db, { name: 'Kênh B', code: 'kenh-a' }))

@@ -113,6 +113,30 @@ export function CharactersManager({
     }
   }
 
+  async function uploadSource(characterId: string, event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    setError('')
+    try {
+      await sendForm(`/api/characters/${characterId}/sources`, csrf, form)
+      event.currentTarget.reset()
+      router.refresh()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Không lưu được file gốc.')
+    }
+  }
+
+  async function removeSource(characterId: string, fileId: string) {
+    if (!window.confirm('Xóa file gốc này?')) return
+    setError('')
+    try {
+      await sendJson(`/api/characters/${characterId}/sources/${fileId}`, 'DELETE', csrf)
+      router.refresh()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Không xóa được file gốc.')
+    }
+  }
+
   async function removeImage(id: string) {
     setError('')
     try {
@@ -255,6 +279,43 @@ export function CharactersManager({
                 </form>
               ) : null}
             </section>
+            <section className="stack">
+              <h3>File gốc (Remotion/SVG/sprite)</h3>
+              {character.sourceFiles.length === 0 ? (
+                <p className="muted">Chưa có file gốc. Tải zip dự án Remotion, SVG hoặc sprite (tối đa 4 MB mỗi file).</p>
+              ) : (
+                <ul className="source-files">
+                  {character.sourceFiles.map((file) => (
+                    <li key={file.id}>
+                      <a href={`/api/characters/${character.id}/sources/${file.id}`}>{file.filename}</a>
+                      <span className="muted">
+                        {' '}
+                        · {formatBytes(file.byteSize)}
+                        {file.note ? ` · ${file.note}` : ''}
+                      </span>
+                      {isAdmin ? (
+                        <button type="button" className="secondary" onClick={() => removeSource(character.id, file.id)}>
+                          Xóa
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {isAdmin ? (
+                <form className="form-grid cols-3" onSubmit={(event) => uploadSource(character.id, event)}>
+                  <div className="field">
+                    <label htmlFor={`source-file-${character.id}`}>File .zip, .json hoặc .txt</label>
+                    <input id={`source-file-${character.id}`} name="file" type="file" accept=".zip,.json,.txt,application/zip,application/json,text/plain" required />
+                  </div>
+                  <div className="field">
+                    <label htmlFor={`source-note-${character.id}`}>Ghi chú</label>
+                    <input id={`source-note-${character.id}`} name="note" maxLength={500} placeholder="Dự án Remotion của Cam" />
+                  </div>
+                  <button type="submit">Tải file gốc</button>
+                </form>
+              ) : null}
+            </section>
             <div className="actions">
               <a className="button secondary" href={`/api/characters/${character.id}/pack`}>
                 Tải gói nhân vật
@@ -276,6 +337,12 @@ export function CharactersManager({
       ) : null}
     </div>
   )
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function VoiceFields({ character }: { character: Character }) {
