@@ -21,6 +21,8 @@ const adminRoutes = [
   'app/api/characters/[id]/route.ts',
   'app/api/characters/[id]/images/route.ts',
   'app/api/characters/[id]/voice/route.ts',
+  'app/api/characters/[id]/sources/route.ts',
+  'app/api/characters/[id]/sources/[fileId]/route.ts',
   'app/api/character-images/[id]/route.ts',
   'app/api/backup/restore/route.ts',
 ]

@@ -8,13 +8,13 @@ export const LOGIN_IP_LIMIT = 30
 export const DEFAULT_BOOTSTRAP_EMAIL = 'anhthi199x@gmail.com'
 export const TZ = 'Asia/Saigon'
 export const BACKUP_FORMAT = 'qlk-backup'
-export const BACKUP_VERSION = 2
+export const BACKUP_VERSION = 3
 export const RESTORE_CONFIRM = 'KHOI PHUC'
 export const IMPORT_TOKEN_PREFIX = 'qlkimp_'
 
 export const PLATFORMS = ['facebook', 'youtube', 'tiktok', 'x'] as const
 export const POSTING_SERVICES = ['buffer', 'x', 'schedule-n-chill', 'postiz'] as const
-export const BUFFER_CONNECTIONS = ['anhthi199x', 'anhthimxh'] as const
+export const BUFFER_CONNECTIONS = ['anhthi199x', 'anhthimxh', 'anhthimusics', 'voanhviet77', 'yenkiem2000'] as const
 export const IMAGE_KINDS = ['front', 'full_body', 'expression', 'other'] as const
 
 export type Platform = (typeof PLATFORMS)[number]

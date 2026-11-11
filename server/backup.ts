@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import JSZip from 'jszip'
 import type { Db } from '../lib/db'
 import { HttpError } from '../lib/http-error'
@@ -6,6 +7,7 @@ import { asBool, asInt, asIso, blank } from '../lib/rows'
 import { isBotId, isChannelCode } from '../lib/slug'
 import { assertPublicHttpsUrl } from '../lib/urls'
 import { MAX_VOICE_BYTES, VOICE_ACCENTS, VOICE_GENDERS, voiceFilePath } from '../lib/voice'
+import { MAX_SOURCE_BYTES, contentTypeForSource, sourceExtension, sourceFilePath } from '../lib/source-files'
 import { audioBytes } from './content'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -62,12 +64,21 @@ type BackupCharacter = {
   appearance: string
   sortOrder: number
   voice: BackupVoice
+  sourceFiles: BackupSourceFile[]
+}
+type BackupSourceFile = {
+  id: string
+  filename: string
+  contentType: string
+  byteSize: number
+  note: string | null
+  path: string
 }
 type BackupImage = { id: string; characterId: string; kind: ImageKind; label: string | null; url: string }
 
 export type BackupData = {
   format: typeof BACKUP_FORMAT
-  version: 1 | 2
+  version: 1 | 2 | 3
   exportedAt: string
   channels: BackupChannel[]
   slots: BackupSlot[]
@@ -93,6 +104,26 @@ function readVoice(value: unknown, index: number): BackupVoice {
     sampleContentType: optional(voice.sampleContentType, `characters[${index}].voice.sampleContentType`, 80),
     audioFile: optional(voice.audioFile, `characters[${index}].voice.audioFile`, 200),
   }
+}
+
+function readSourceFiles(value: unknown, characterId: string, index: number): BackupSourceFile[] {
+  if (value == null) return []
+  return arrayOf(value, `characters[${index}].sourceFiles`, 40).map((item, fileIndex) => {
+    const field = `characters[${index}].sourceFiles[${fileIndex}]`
+    const filename = text(item.filename, `${field}.filename`, 120)
+    if (!sourceExtension(filename) || filename.includes('/') || filename.includes('\\')) {
+      throw new HttpError(`${field}.filename không hợp lệ.`, 400)
+    }
+    const contentType = contentTypeForSource(sourceExtension(filename)!)
+    return {
+      id: item.id == null || item.id === '' ? randomUUID() : uuid(item.id, `${field}.id`),
+      filename,
+      contentType,
+      byteSize: Number.isFinite(Number(item.byteSize)) ? Number(item.byteSize) : 0,
+      note: optional(item.note, `${field}.note`, 500),
+      path: sourceFilePath(characterId, filename),
+    }
+  })
 }
 
 function record(value: unknown, field: string): Record<string, unknown> {
@@ -146,7 +177,7 @@ function optionalIso(value: unknown, field: string): string | null {
 
 export function parseBackup(value: unknown): BackupData {
   const data = record(value, 'Bản sao lưu')
-  if (data.format !== BACKUP_FORMAT || (data.version !== 1 && data.version !== 2)) {
+  if (data.format !== BACKUP_FORMAT || (data.version !== 1 && data.version !== 2 && data.version !== 3)) {
     throw new HttpError('Định dạng bản sao lưu không được hỗ trợ.', 400)
   }
   const channels = arrayOf(data.channels, 'channels', 500).map((item, index) => {
@@ -238,13 +269,15 @@ export function parseBackup(value: unknown): BackupData {
   const characters = arrayOf(data.characters, 'characters', 2000).map((item, index) => {
     const botId = text(item.botId, `characters[${index}].botId`, 80)
     if (!botIds.has(botId)) throw new HttpError('Nhân vật trỏ tới bot không có trong bản sao lưu.', 400)
+    const id = uuid(item.id, `characters[${index}].id`)
     return {
-      id: uuid(item.id, `characters[${index}].id`),
+      id,
       botId,
       name: text(item.name, `characters[${index}].name`, 120),
       appearance: text(item.appearance, `characters[${index}].appearance`, 8000),
       sortOrder: Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : 0,
       voice: readVoice(item.voice, index),
+      sourceFiles: readSourceFiles(item.sourceFiles, id, index),
     }
   })
   const characterIds = new Set(characters.map((item) => item.id))
@@ -276,7 +309,7 @@ export function parseBackup(value: unknown): BackupData {
 }
 
 export async function exportBackup(db: Db): Promise<BackupData> {
-  const [channels, slots, snapshots, posts, bots, characters, images, samples] = await Promise.all([
+  const [channels, slots, snapshots, posts, bots, characters, images, samples, sources] = await Promise.all([
     db.query(`SELECT * FROM channels ORDER BY code ASC`),
     db.query(
       `SELECT s.id, s.weekday, s.time_local, s.label, c.code AS channel_code
@@ -289,8 +322,28 @@ export async function exportBackup(db: Db): Promise<BackupData> {
     db.query(`SELECT * FROM characters ORDER BY sort_order ASC, name ASC`),
     db.query(`SELECT * FROM character_images ORDER BY created_at ASC`),
     db.query(`SELECT character_id, filename, content_type FROM character_voice_samples`),
+    db.query(
+      `SELECT id, character_id, filename, content_type, byte_size, note
+       FROM character_source_files
+       ORDER BY created_at ASC`,
+    ),
   ])
   const sampleByCharacter = new Map(samples.rows.map((row) => [String(row.character_id), row]))
+  const sourcesByCharacter = new Map<string, BackupSourceFile[]>()
+  for (const row of sources.rows) {
+    const characterId = String(row.character_id)
+    const filename = String(row.filename)
+    const list = sourcesByCharacter.get(characterId) ?? []
+    list.push({
+      id: String(row.id),
+      filename,
+      contentType: String(row.content_type),
+      byteSize: asInt(row.byte_size) ?? 0,
+      note: blank(row.note == null ? null : String(row.note)),
+      path: sourceFilePath(characterId, filename),
+    })
+    sourcesByCharacter.set(characterId, list)
+  }
   return {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
@@ -366,6 +419,7 @@ export async function exportBackup(db: Db): Promise<BackupData> {
           sampleContentType: contentType,
           audioFile: contentType ? voiceFilePath(String(row.id), contentType) : null,
         },
+        sourceFiles: sourcesByCharacter.get(String(row.id)) ?? [],
       }
     }),
     characterImages: images.rows.map((row) => ({
@@ -381,6 +435,7 @@ export async function exportBackup(db: Db): Promise<BackupData> {
 export async function backupZip(db: Db): Promise<Uint8Array> {
   const data = await exportBackup(db)
   const samples = await db.query(`SELECT character_id, content_type, filename, audio FROM character_voice_samples`)
+  const sources = await db.query(`SELECT character_id, filename, data FROM character_source_files`)
   const zip = new JSZip()
   zip.file('data.json', JSON.stringify(data, null, 2))
   zip.file(
@@ -390,13 +445,17 @@ export async function backupZip(db: Db): Promise<Uint8Array> {
   for (const row of samples.rows) {
     zip.file(voiceFilePath(String(row.character_id), String(row.content_type)), audioBytes(row.audio))
   }
+  for (const row of sources.rows) {
+    zip.file(sourceFilePath(String(row.character_id), String(row.filename)), audioBytes(row.data))
+  }
   zip.file(
     'README.txt',
     [
       'Bản sao lưu Quản lý lịch kênh (nội bộ).',
       'Không gồm mật khẩu, phiên đăng nhập hay mã nhập snapshot.',
       'Bài đăng là snapshot đã nhập, không phải dữ liệu thời gian thực.',
-      'characters.json mô tả nhân vật và giọng. File nghe mẫu nằm trong thư mục voices/.',
+      'characters.json mô tả nhân vật, giọng và file gốc. File nghe mẫu nằm trong thư mục voices/.',
+      'File gốc (zip/json/txt) nằm trong sources/<mã nhân vật>/<tên file>.',
       'Khôi phục thay thế kênh, slot, snapshot, bot và nhân vật. Không đổi tài khoản quản trị.',
       '',
     ].join('\n'),
@@ -406,7 +465,16 @@ export async function backupZip(db: Db): Promise<Uint8Array> {
 
 export type StoredVoice = { characterId: string; contentType: string; filename: string; bytes: Uint8Array }
 
-export async function restoreBackup(db: Db, value: unknown, voices: StoredVoice[] = []) {
+export type StoredSource = {
+  id: string
+  characterId: string
+  filename: string
+  contentType: string
+  note: string | null
+  bytes: Uint8Array
+}
+
+export async function restoreBackup(db: Db, value: unknown, voices: StoredVoice[] = [], sources: StoredSource[] = []) {
   const data = parseBackup(value)
   await db.transaction(async (tx) => {
     await tx.query(`DELETE FROM character_images`)
@@ -522,6 +590,29 @@ export async function restoreBackup(db: Db, value: unknown, voices: StoredVoice[
         [voice.characterId, voice.filename, voice.contentType, voice.bytes.byteLength, Buffer.from(voice.bytes)],
       )
     }
+    const sourceMeta = new Map(
+      data.characters.flatMap((character) => character.sourceFiles.map((file) => [`${character.id}/${file.filename}`, file])),
+    )
+    for (const source of sources) {
+      if (!characterIds.has(source.characterId)) continue
+      if (source.bytes.byteLength > MAX_SOURCE_BYTES) {
+        throw new HttpError('File gốc trong bản sao lưu lớn hơn 4 MB.', 400)
+      }
+      const meta = sourceMeta.get(`${source.characterId}/${source.filename}`)
+      await tx.query(
+        `INSERT INTO character_source_files (id, character_id, filename, content_type, byte_size, data, note)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          meta?.id ?? source.id,
+          source.characterId,
+          source.filename,
+          source.contentType,
+          source.bytes.byteLength,
+          Buffer.from(source.bytes),
+          meta?.note ?? source.note,
+        ],
+      )
+    }
     for (const image of data.characterImages) {
       await tx.query(
         `INSERT INTO character_images (id, character_id, kind, label, url) VALUES ($1, $2, $3, $4, $5)`,
@@ -543,11 +634,11 @@ const AUDIO_TYPES: Record<string, string> = {
 export async function readBackupBundle(
   bytes: Uint8Array,
   filename: string,
-): Promise<{ data: unknown; voices: StoredVoice[] }> {
+): Promise<{ data: unknown; voices: StoredVoice[]; sources: StoredSource[] }> {
   if (bytes.byteLength > 20_000_000) throw new HttpError('Tệp lớn hơn 20 MB.', 400)
   if (!filename.toLowerCase().endsWith('.zip')) {
     try {
-      return { data: JSON.parse(Buffer.from(bytes).toString('utf8')) as unknown, voices: [] }
+      return { data: JSON.parse(Buffer.from(bytes).toString('utf8')) as unknown, voices: [], sources: [] }
     } catch {
       throw new HttpError('Không đọc được JSON.', 400)
     }
@@ -566,7 +657,25 @@ export async function readBackupBundle(
     if (audio.byteLength > MAX_VOICE_BYTES) throw new HttpError('File nghe mẫu trong bản sao lưu lớn hơn 4 MB.', 400)
     voices.push({ characterId, contentType, filename: base, bytes: audio })
   }
-  return { data, voices }
+  const sources: StoredSource[] = []
+  for (const file of zip.file(/^sources\/[0-9a-f-]+\/[^/]+$/i)) {
+    const parts = file.name.split('/')
+    const characterId = parts[1] ?? ''
+    const filename = parts[2] ?? ''
+    const ext = sourceExtension(filename)
+    if (!ext) continue
+    const body = await file.async('uint8array')
+    if (body.byteLength > MAX_SOURCE_BYTES) throw new HttpError('File gốc trong bản sao lưu lớn hơn 4 MB.', 400)
+    sources.push({
+      id: randomUUID(),
+      characterId,
+      filename,
+      contentType: contentTypeForSource(ext),
+      note: null,
+      bytes: body,
+    })
+  }
+  return { data, voices, sources }
 }
 
 export async function readBackupFile(bytes: Uint8Array, filename: string): Promise<unknown> {

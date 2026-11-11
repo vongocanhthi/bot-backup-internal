@@ -287,6 +287,8 @@ pre.export {
 .thumb { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; background: #eef2f6; }
 
 .character { display: grid; gap: 10px; }
+.source-files { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.source-files li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 .images { display: flex; flex-wrap: wrap; gap: 12px; }
 

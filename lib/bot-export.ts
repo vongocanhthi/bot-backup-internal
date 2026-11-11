@@ -31,6 +31,7 @@ export type ExportCharacter = {
   appearance: string
   images: ExportImage[]
   voice?: ExportVoice | null
+  sourceFiles?: { filename: string; note: string | null }[]
 }
 
 export function renderBotExport(
@@ -58,6 +59,8 @@ export function renderBotExport(
     lines.push('')
     lines.push(...voiceLines(character.voice))
     lines.push('')
+    lines.push(...sourceLines(character.sourceFiles))
+    lines.push('')
   }
   return `${lines.join('\n').trimEnd()}\n`
 }
@@ -75,6 +78,15 @@ function voiceLines(voice: ExportVoice | null | undefined): string[] {
   if (voice.style) lines.push(`- Cách nói: ${voice.style}`)
   if (voice.sampleLine) lines.push(`- Câu mẫu: ${voice.sampleLine}`)
   if (voice.sampleFile) lines.push(`- File nghe mẫu: ${voice.sampleFile}`)
+  return lines
+}
+
+function sourceLines(files: { filename: string; note: string | null }[] | undefined): string[] {
+  if (!files || files.length === 0) return ['File gốc: chưa có.']
+  const lines = ['File gốc (Remotion/SVG/sprite):']
+  for (const file of files) {
+    lines.push(file.note ? `- ${file.filename} — ${file.note}` : `- ${file.filename}`)
+  }
   return lines
 }
 
@@ -103,6 +115,8 @@ export function renderCharacterMarkdown(character: ExportCharacter): string {
     VOICE_INSTRUCTION,
     '',
     ...voiceLines(character.voice),
+    '',
+    ...sourceLines(character.sourceFiles),
     '',
     '## Ảnh tham chiếu',
   ]

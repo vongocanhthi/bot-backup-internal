@@ -17,6 +17,9 @@ export const SERVICE_LABELS: Record<string, string> = {
 export const CONNECTION_LABELS: Record<string, string> = {
   anhthi199x: 'Buffer · anhthi199x',
   anhthimxh: 'Buffer · anhthimxh',
+  anhthimusics: 'Buffer · anhthimusics',
+  voanhviet77: 'Buffer · voanhviet77',
+  yenkiem2000: 'Buffer · yenkiem2000',
 }
 
 export const KIND_LABELS: Record<ImageKind, string> = {

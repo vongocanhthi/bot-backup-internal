@@ -1,4 +1,4 @@
-import { getCharacter, getVoiceAudio } from '@/server/content'
+import { getCharacter, getVoiceAudio, listSourceFileBytes } from '@/server/content'
 import { guardRead } from '@/server/guard'
 import { HttpError } from '@/lib/http-error'
 import { api, download } from '@/server/http'
@@ -16,6 +16,7 @@ export const GET = api<{ params: Promise<{ id: string }> }>(async (req, ctx) => 
   const character = await getCharacter(db, id)
   if (!character) throw new HttpError('Không tìm thấy nhân vật.', 404)
   const audio = await getVoiceAudio(db, id)
-  const zip = await buildCharacterPack(character, audio ? { filename: audio.filename, bytes: audio.bytes } : null)
+  const sources = await listSourceFileBytes(db, id)
+  const zip = await buildCharacterPack(character, audio ? { filename: audio.filename, bytes: audio.bytes } : null, sources)
   return download(zip, 'application/zip', `${safeFilePart(character.name)}-nhan-vat.zip`)
 })
