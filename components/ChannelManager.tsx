@@ -71,7 +71,8 @@ export function ChannelManager({
   async function addSlot(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!selected) return
-    const form = new FormData(event.currentTarget)
+    const formEl = event.currentTarget
+    const form = new FormData(formEl)
     setError('')
     try {
       await sendJson('/api/slots', 'POST', csrf, {
@@ -80,7 +81,7 @@ export function ChannelManager({
         timeLocal: form.get('timeLocal'),
         label: form.get('label'),
       })
-      event.currentTarget.reset()
+      formEl?.reset()
       router.refresh()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Không thêm được slot.')
