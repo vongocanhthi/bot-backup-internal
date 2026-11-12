@@ -26,7 +26,8 @@ export function CharactersManager({
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formEl = event.currentTarget
+    const form = new FormData(formEl)
     setError('')
     try {
       await sendJson('/api/characters', 'POST', csrf, {
@@ -34,7 +35,7 @@ export function CharactersManager({
         name: form.get('name'),
         appearance: form.get('appearance'),
       })
-      event.currentTarget.reset()
+      formEl?.reset()
       router.refresh()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Không tạo được nhân vật.')
@@ -78,11 +79,12 @@ export function CharactersManager({
 
   async function upload(characterId: string, event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formEl = event.currentTarget
+    const form = new FormData(formEl)
     setError('')
     try {
       await sendForm(`/api/characters/${characterId}/images`, csrf, form)
-      event.currentTarget.reset()
+      formEl?.reset()
       router.refresh()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Không tải được ảnh.')
@@ -91,11 +93,12 @@ export function CharactersManager({
 
   async function uploadVoice(characterId: string, event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formEl = event.currentTarget
+    const form = new FormData(formEl)
     setError('')
     try {
       await sendForm(`/api/characters/${characterId}/voice`, csrf, form)
-      event.currentTarget.reset()
+      formEl?.reset()
       router.refresh()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Không lưu được file nghe mẫu.')
@@ -115,11 +118,12 @@ export function CharactersManager({
 
   async function uploadSource(characterId: string, event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formEl = event.currentTarget
+    const form = new FormData(formEl)
     setError('')
     try {
       await sendForm(`/api/characters/${characterId}/sources`, csrf, form)
-      event.currentTarget.reset()
+      formEl?.reset()
       router.refresh()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Không lưu được file gốc.')

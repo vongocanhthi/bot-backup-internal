@@ -21,20 +21,39 @@ export function ApiKeysManager({
   const router = useRouter()
   const [error, setError] = useState('')
   const [created, setCreated] = useState<{ name: string; key: string } | null>(null)
+  const [pendingKeys, setPendingKeys] = useState<ApiKeyRecord[]>([])
   const names = new Map(bots.map((bot) => [bot.id, bot.name]))
+  const visibleKeys = [...pendingKeys.filter((item) => !keys.some((key) => key.id === item.id)), ...keys]
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formEl = event.currentTarget
+    const form = new FormData(formEl)
     setError('')
     try {
       const data = (await sendJson('/api/api-keys', 'POST', csrf, {
         name: form.get('name'),
         botId: form.get('botId'),
-      })) as { key?: string; name?: string }
+      })) as { key?: string; name?: string; id?: string; prefix?: string; botId?: string | null }
       if (!data.key) throw new Error('Máy chủ không trả khóa.')
-      setCreated({ name: data.name || String(form.get('name') || ''), key: data.key })
-      event.currentTarget.reset()
+      const name = data.name || String(form.get('name') || '')
+      setCreated({ name, key: data.key })
+      if (data.id && data.prefix) {
+        setPendingKeys((current) => [
+          {
+            id: data.id as string,
+            name,
+            prefix: data.prefix as string,
+            scope: 'backup',
+            botId: data.botId || null,
+            createdAt: new Date().toISOString(),
+            lastUsedAt: null,
+            revokedAt: null,
+          },
+          ...current,
+        ])
+      }
+      formEl?.reset()
       router.refresh()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Không tạo được khóa.')
@@ -102,7 +121,7 @@ export function ApiKeysManager({
             </tr>
           </thead>
           <tbody>
-            {keys.map((item) => (
+            {visibleKeys.map((item) => (
               <tr key={item.id}>
                 <td>{item.name}</td>
                 <td>
@@ -123,7 +142,7 @@ export function ApiKeysManager({
             ))}
           </tbody>
         </table>
-        {keys.length === 0 ? <p>Chưa có khóa.</p> : null}
+        {visibleKeys.length === 0 ? <p>Chưa có khóa.</p> : null}
       </div>
       {error ? (
         <p className="error" role="alert">

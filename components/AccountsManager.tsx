@@ -12,7 +12,8 @@ export function AccountsManager({ csrf, currentId, users }: { csrf: string; curr
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formEl = event.currentTarget
+    const form = new FormData(formEl)
     setError('')
     try {
       await sendJson('/api/admins', 'POST', csrf, {
@@ -20,7 +21,7 @@ export function AccountsManager({ csrf, currentId, users }: { csrf: string; curr
         password: form.get('password'),
         isAdmin: form.get('isAdmin') === 'on',
       })
-      event.currentTarget.reset()
+      formEl?.reset()
       router.refresh()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Không tạo được tài khoản.')
@@ -39,9 +40,10 @@ export function AccountsManager({ csrf, currentId, users }: { csrf: string; curr
 
   async function setPassword(id: string, event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const formEl = event.currentTarget
+    const form = new FormData(formEl)
     await patch(id, { password: form.get('password') })
-    event.currentTarget.reset()
+    formEl?.reset()
   }
 
   return (
