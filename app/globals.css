@@ -274,6 +274,8 @@ code, .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monosp
 
 .legend { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
+.prompt-steps { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; }
+
 pre.export {
   white-space: pre-wrap;
   word-break: break-word;
