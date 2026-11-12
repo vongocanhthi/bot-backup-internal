@@ -29,6 +29,7 @@ export function BackupPrompts() {
             <li key={step}>{step}</li>
           ))}
         </ol>
+        <p className="muted">Bước 1 có hai mẫu: chép thư mục trên máy, hoặc prompt API để bot tự tải lên web.</p>
       </section>
       <section className="card stack">
         <h2>Điền chỗ trống</h2>

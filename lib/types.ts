@@ -43,6 +43,17 @@ export type Slot = {
   label: string | null
 }
 
+export type ApiKeyRecord = {
+  id: string
+  name: string
+  prefix: string
+  scope: string
+  botId: string | null
+  createdAt: string
+  lastUsedAt: string | null
+  revokedAt: string | null
+}
+
 export type Bot = {
   id: string
   name: string

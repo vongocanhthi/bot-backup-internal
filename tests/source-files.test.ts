@@ -22,7 +22,7 @@ test('source uploads accept zip json and txt and reject other types or files ove
   assert.equal(describeSourceUpload('palette.json', 'application/json', 4).contentType, 'application/json')
   assert.throws(() => describeSourceUpload('sprite.png', 'image/png', 10), (error: unknown) => {
     assert.ok(error instanceof HttpError)
-    assert.match(error.message, /File gốc phải là \.zip, \.json hoặc \.txt/)
+    assert.match(error.message, /File gốc phải là \.zip, \.json, \.txt hoặc \.md/)
     return true
   })
   assert.throws(() => describeSourceUpload('big.zip', 'application/zip', 4 * 1024 * 1024 + 1), (error: unknown) => {

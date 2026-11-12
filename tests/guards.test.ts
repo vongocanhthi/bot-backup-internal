@@ -25,6 +25,8 @@ const adminRoutes = [
   'app/api/characters/[id]/sources/[fileId]/route.ts',
   'app/api/character-images/[id]/route.ts',
   'app/api/backup/restore/route.ts',
+  'app/api/api-keys/route.ts',
+  'app/api/api-keys/[id]/route.ts',
 ]
 
 test('mutating admin routes check an admin session and csrf', () => {

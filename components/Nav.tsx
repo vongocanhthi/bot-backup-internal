@@ -51,6 +51,7 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
     ...(isAdmin
       ? [
           { href: '/tai-khoan', label: 'Tài khoản' },
+          { href: '/khoa-api', label: 'Khóa API' },
           { href: '/sao-luu', label: 'Sao lưu' },
         ]
       : []),
