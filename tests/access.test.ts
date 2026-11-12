@@ -5,7 +5,7 @@ import { sessionCookieBase } from '../lib/cookies'
 import { SESSION_HOURS } from '../lib/constants'
 
 test('unauthenticated pages redirect to login', () => {
-  for (const path of ['/', '/kenh', '/bot', '/nhan-vat', '/tai-khoan', '/sao-luu', '/doi-mat-khau', '/bot/abc']) {
+  for (const path of ['/', '/kenh', '/bot', '/nhan-vat', '/prompt-sao-luu', '/tai-khoan', '/sao-luu', '/doi-mat-khau', '/bot/abc']) {
     assert.deepEqual(decideAccess(path, false), { type: 'redirect', pathname: '/login' })
   }
   assert.equal(decideAccess('/login', false).type, 'next')

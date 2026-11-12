@@ -65,6 +65,7 @@ Seed không ghi đè kênh, slot, bot hay nhân vật đã có. `SEED_OVERWRITE=
 - Cấu hình bot: xem, sửa, sao chép, tải `.txt`. File seed lấy từ 10 prompt đính kèm; mã bot là phần tên file trước `.txt`.
 - Nhân vật: mô tả ngoại hình cố định và ảnh (mặt trước, toàn thân, biểu cảm). Ảnh gửi server rồi lên `https://api.imgbb.com/1/upload`. Bản sao chép bot có mục **Nhân vật** và câu nhắc luôn dùng ảnh tham chiếu. Có tải zip gói nhân vật.
 - Sao lưu zip/JSON và khôi phục (quản trị, phải gõ `KHOI PHUC`). Không gồm mật khẩu, phiên, mã nhập.
+- Trang **Prompt sao lưu**: mẫu prompt để sao chép (sao lưu bot lên web, rồi dừng bot cũ). Chỗ `{TEN_BOT}` và `{SLUG}` điền trên trang; để trống thì giữ nguyên. Không lưu prompt trong database.
 
 `robots.txt` chặn toàn bộ. Trang gửi `noindex`.
 

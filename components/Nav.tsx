@@ -10,6 +10,7 @@ const LINKS = [
   { href: '/kenh', label: 'Kênh' },
   { href: '/bot', label: 'Cấu hình bot' },
   { href: '/nhan-vat', label: 'Nhân vật' },
+  { href: '/prompt-sao-luu', label: 'Prompt sao lưu' },
   { href: '/doi-mat-khau', label: 'Đổi mật khẩu' },
 ]
 
