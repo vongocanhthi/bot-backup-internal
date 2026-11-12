@@ -65,7 +65,8 @@ Seed không ghi đè kênh, slot, bot hay nhân vật đã có. `SEED_OVERWRITE=
 - Cấu hình bot: xem, sửa, sao chép, tải `.txt`. File seed lấy từ 10 prompt đính kèm; mã bot là phần tên file trước `.txt`.
 - Nhân vật: mô tả ngoại hình cố định và ảnh (mặt trước, toàn thân, biểu cảm). Ảnh gửi server rồi lên `https://api.imgbb.com/1/upload`. Bản sao chép bot có mục **Nhân vật** và câu nhắc luôn dùng ảnh tham chiếu. Có tải zip gói nhân vật.
 - Sao lưu zip/JSON và khôi phục (quản trị, phải gõ `KHOI PHUC`). Không gồm mật khẩu, phiên, mã nhập.
-- Trang **Prompt sao lưu**: mẫu prompt để sao chép (sao lưu bot lên web, rồi dừng bot cũ). Chỗ `{TEN_BOT}` và `{SLUG}` điền trên trang; để trống thì giữ nguyên. Không lưu prompt trong database.
+- Trang **Prompt sao lưu**: mẫu prompt để sao chép (sao lưu bot lên web, dừng bot cũ, hoặc tải lên bằng API). Chỗ `{TEN_BOT}` và `{SLUG}` điền trên trang; để trống thì giữ nguyên. Không lưu prompt trong database.
+- Khóa API cho bot tải sao lưu mà không dùng mật khẩu đăng nhập. Xem mục dưới.
 
 `robots.txt` chặn toàn bộ. Trang gửi `noindex`.
 
@@ -106,6 +107,32 @@ Mỗi nhân vật có thể lưu một hoặc nhiều file gốc để dựng l�
 Bản sao lưu zip đặt file tại `sources/<mã nhân vật>/<tên file>` và ghi đường dẫn trong `characters.json`. Bản sao lưu cũ không có mục này vẫn khôi phục được. Khi copy hoặc tải cấu hình bot, mục nhân vật liệt kê tên các file gốc.
 
 Nhãn kết nối Buffer được phép: `anhthi199x`, `anhthimxh`, `anhthimusics`, `voanhviet77`, `yenkiem2000`.
+
+## Khóa API sao lưu
+
+Bot có thể tải bản sao lưu mà không đăng nhập bằng mật khẩu. Quản trị tạo khóa ở tab **Khóa API**. Khóa có dạng `bbk_` cộng 32 byte ngẫu nhiên. Cơ sở dữ liệu chỉ lưu phần băm SHA-256 và 8 ký tự đầu để nhận diện. Khóa đầy đủ hiện **một lần**. Thu hồi thì khóa ngừng dùng ngay.
+
+Migration: `migrations/004_api_keys.sql`. Bảng `api_keys` gồm id, name, key_prefix, key_hash, scope (mặc định `backup`), bot_id, created_by, created_at, last_used_at, revoked_at. `bots.id` đang là text nên `bot_id` cũng là text, khóa ngoại tới `bots`, xóa bot thì cột này thành null. Cùng migration thêm `bots.settings` (jsonb) và `bots.notes`. Nếu bảng chưa có, API trả 503 tiếng Việt thay vì sập trang.
+
+Vercel Authentication vẫn bật. App không đọc header bypass. Bot (client) tự thêm header mà Vercel kiểm tra trước khi request vào app:
+
+- `Authorization: Bearer $BACKUP_API_KEY`
+- `x-vercel-protection-bypass: $VERCEL_BYPASS_SECRET`
+
+Biến bot tự giữ, không commit: `BACKUP_API_BASE`, `BACKUP_API_KEY`, `VERCEL_BYPASS_SECRET`. Không có biến môi trường mới trên app. Ảnh multipart vẫn dùng `IMGBB_API_KEY`; nếu thiếu, endpoint ảnh trả 400.
+
+Giới hạn body của Vercel khoảng 4,5 MB mỗi request. File giọng và file gốc tối đa 4 MB.
+
+Endpoint JSON, xác thực bằng Bearer, không dùng cookie hay CSRF:
+
+- `GET /api/v1/backup/ping` — tên khóa và bot được gán, nếu có.
+- `POST /api/v1/backup/bot` — tạo hoặc cập nhật bot theo `id` hoặc `code`: name, title, prompt, settings, notes. Văn bản bị quét bí mật; dính thì từ chối và nêu loại.
+- `POST /api/v1/backup/character` — tạo hoặc cập nhật nhân vật theo bot và tên, gồm ngoại hình và các trường giọng.
+- `POST /api/v1/backup/character/{id}/image` — JSON `{ url, kind }` hoặc multipart ảnh để server gửi lên imgbb.
+- `PUT /api/v1/backup/character/{id}/voice` — multipart MP3, M4A hoặc WAV, tối đa 4 MB.
+- `POST /api/v1/backup/character/{id}/source-file` — multipart `.zip`, `.json`, `.txt` hoặc `.md`, tối đa 4 MB, ghi đè nếu trùng tên.
+
+Khóa có `bot_id` thì chỉ được ghi bot đó. Khóa đã thu hồi bị từ chối. So khớp phần băm theo thời gian không đổi. Mỗi IP bị giới hạn nhẹ, khoảng 60 request mỗi phút.
 
 Vercel giới hạn body request khoảng 4,5 MB. File mẫu nên là một câu ngắn. Bản sao lưu có nhiều file lớn có thể vượt giới hạn đó khi tải lên từ trang web.
 

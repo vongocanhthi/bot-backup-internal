@@ -51,6 +51,9 @@ Mỗi nhân vật một thư mục, tên thư mục là tên nhân vật.
 - Cách dựng lại bot trên tài khoản Grok khác.
 - Phần còn thiếu hoặc bị mất, và vì sao.
 
+6. NGUON_TU_LIEU.md
+Với mỗi file âm thanh, nhạc, ảnh, video mẫu và mỗi nguồn tin, ghi nguồn: trang web, URL gốc, tác giả, giấy phép, hoặc "chưa rõ nguồn".
+
 Quy tắc
 - Không đưa mật khẩu, token, API key hay cookie. Quét nội dung, xóa những chỗ đó, rồi báo nếu phát hiện.
 - Mỗi file tối đa 4 MB. File lớn hơn thì không chép vào gói; ghi đường dẫn của nó trên máy vào README.
@@ -80,6 +83,73 @@ Sau đó báo lại:
 - Những gì vẫn còn chạy.
 
 Rồi chờ. Người dùng sẽ tự xóa bot này trên thanh bên: chuột phải → Delete. Bạn không tự xóa mình.
+`,
+  },
+  {
+    id: 'sao-luu-api',
+    title: 'Prompt sao lưu qua API',
+    body: `Bạn là {TEN_BOT}. Hãy đẩy bản sao lưu lên web bằng API. Không in khóa, không ghi khóa vào file.
+
+Dùng biến môi trường đã có sẵn:
+- BACKUP_API_BASE: gốc của trang, không có dấu / ở cuối
+- BACKUP_API_KEY: khóa sao lưu
+- VERCEL_BYPASS_SECRET: mã Protection Bypass for Automation của Vercel
+
+Vercel Authentication vẫn bật. Mỗi lệnh curl thêm đúng hai header này. Không điền giá trị thật vào lệnh:
+
+-H "Authorization: Bearer $BACKUP_API_KEY" \\
+-H "x-vercel-protection-bypass: $VERCEL_BYPASS_SECRET"
+
+Mỗi request tối đa khoảng 4,5 MB. File giọng và file gốc tối đa 4 MB.
+
+1. Kiểm tra khóa.
+curl -sS \\
+  -H "Authorization: Bearer $BACKUP_API_KEY" \\
+  -H "x-vercel-protection-bypass: $VERCEL_BYPASS_SECRET" \\
+  "$BACKUP_API_BASE/api/v1/backup/ping"
+
+2. Ghi bot theo mã ổn định (tạo mới hoặc cập nhật). Quét và không gửi mật khẩu, token, API key, cookie.
+curl -sS -X POST \\
+  -H "Authorization: Bearer $BACKUP_API_KEY" \\
+  -H "x-vercel-protection-bypass: $VERCEL_BYPASS_SECRET" \\
+  -H "content-type: application/json" \\
+  -d '{"id":"<mã-bot-ổn-định>","name":"{TEN_BOT}","title":"{TEN_BOT}","prompt":"...","settings":{},"notes":""}' \\
+  "$BACKUP_API_BASE/api/v1/backup/bot"
+
+3. Ghi từng nhân vật theo cặp bot và tên.
+curl -sS -X POST \\
+  -H "Authorization: Bearer $BACKUP_API_KEY" \\
+  -H "x-vercel-protection-bypass: $VERCEL_BYPASS_SECRET" \\
+  -H "content-type: application/json" \\
+  -d '{"botId":"<mã-bot>","name":"<tên nhân vật>","appearance":"...","voiceName":"...","voiceProvider":"...","voiceGender":"nu","voiceAccent":"bac","voiceSpeed":"1.0","voicePitch":"...","voiceStyle":"...","voiceSampleLine":"..."}' \\
+  "$BACKUP_API_BASE/api/v1/backup/character"
+
+4. Ảnh: gửi URL imgbb, hoặc tải file nếu máy chủ đã có IMGBB_API_KEY. kind là front, full_body, expression hoặc other.
+curl -sS -X POST \\
+  -H "Authorization: Bearer $BACKUP_API_KEY" \\
+  -H "x-vercel-protection-bypass: $VERCEL_BYPASS_SECRET" \\
+  -F "kind=front" -F "file=@anh.png" \\
+  "$BACKUP_API_BASE/api/v1/backup/character/<id>/image"
+
+5. File giọng MP3, M4A hoặc WAV, tối đa 4 MB, không nhạc nền.
+curl -sS -X PUT \\
+  -H "Authorization: Bearer $BACKUP_API_KEY" \\
+  -H "x-vercel-protection-bypass: $VERCEL_BYPASS_SECRET" \\
+  -F "file=@mau.mp3" \\
+  "$BACKUP_API_BASE/api/v1/backup/character/<id>/voice"
+
+6. File gốc .zip, .json, .txt hoặc .md, tối đa 4 MB. Cùng tên thì ghi đè.
+curl -sS -X POST \\
+  -H "Authorization: Bearer $BACKUP_API_KEY" \\
+  -H "x-vercel-protection-bypass: $VERCEL_BYPASS_SECRET" \\
+  -F "note=Remotion" -F "file=@goi.zip" \\
+  "$BACKUP_API_BASE/api/v1/backup/character/<id>/source-file"
+
+7. Viết NGUON_TU_LIEU.md rồi tải lên bằng endpoint source-file. Với mỗi file âm thanh, nhạc, ảnh, video mẫu và mỗi nguồn tin, ghi nguồn: trang web, URL gốc, tác giả, giấy phép, hoặc "chưa rõ nguồn".
+
+8. Không đổi lịch. Không đăng bài. Không xóa gì. Nếu khóa bị gán một bot thì chỉ ghi bot đó.
+
+Khi xong, trả lời bot "Quản Lý Kênh & Sao Lưu Bot" bằng SendToAgent: những gì đã tải, mã nhân vật, phần còn thiếu, và xác nhận không gửi bí mật.
 `,
   },
 ]

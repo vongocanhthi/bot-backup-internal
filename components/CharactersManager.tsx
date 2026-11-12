@@ -305,8 +305,8 @@ export function CharactersManager({
               {isAdmin ? (
                 <form className="form-grid cols-3" onSubmit={(event) => uploadSource(character.id, event)}>
                   <div className="field">
-                    <label htmlFor={`source-file-${character.id}`}>File .zip, .json hoặc .txt</label>
-                    <input id={`source-file-${character.id}`} name="file" type="file" accept=".zip,.json,.txt,application/zip,application/json,text/plain" required />
+                    <label htmlFor={`source-file-${character.id}`}>File .zip, .json, .txt hoặc .md</label>
+                    <input id={`source-file-${character.id}`} name="file" type="file" accept=".zip,.json,.txt,.md,application/zip,application/json,text/plain,text/markdown" required />
                   </div>
                   <div className="field">
                     <label htmlFor={`source-note-${character.id}`}>Ghi chú</label>

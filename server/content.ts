@@ -385,6 +385,7 @@ export async function saveSourceFile(
   db: Db,
   characterId: string,
   file: { filename: string; contentType: string; bytes: Uint8Array; note: string | null },
+  options?: { replace?: boolean },
 ) {
   const character = await getCharacter(db, characterId)
   if (!character) throw new HttpError('Không tìm thấy nhân vật.', 404)
@@ -392,11 +393,25 @@ export async function saveSourceFile(
   const note = file.note?.trim() || null
   if (note && note.length > 500) throw new HttpError('Ghi chú file gốc quá dài.', 400)
   const id = randomUUID()
+  const bytes = Buffer.from(file.bytes)
   try {
+    if (options?.replace) {
+      await db.query(
+        `INSERT INTO character_source_files (id, character_id, filename, content_type, byte_size, data, note)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (character_id, filename) DO UPDATE SET
+           content_type = EXCLUDED.content_type,
+           byte_size = EXCLUDED.byte_size,
+           data = EXCLUDED.data,
+           note = EXCLUDED.note`,
+        [id, characterId, described.filename, described.contentType, file.bytes.byteLength, bytes, note],
+      )
+      return
+    }
     await db.query(
       `INSERT INTO character_source_files (id, character_id, filename, content_type, byte_size, data, note)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, characterId, described.filename, described.contentType, file.bytes.byteLength, Buffer.from(file.bytes), note],
+      [id, characterId, described.filename, described.contentType, file.bytes.byteLength, bytes, note],
     )
   } catch (error) {
     const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
