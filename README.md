@@ -126,7 +126,7 @@ Giới hạn body của Vercel khoảng 4,5 MB mỗi request. File giọng và f
 Endpoint JSON, xác thực bằng Bearer, không dùng cookie hay CSRF:
 
 - `GET /api/v1/backup/ping` — tên khóa và bot được gán, nếu có.
-- `POST /api/v1/backup/bot` — tạo hoặc cập nhật bot theo `id` hoặc `code`: name, title, prompt, settings, notes. Văn bản bị quét bí mật; dính thì từ chối và nêu loại.
+- `POST /api/v1/backup/bot` — tạo hoặc cập nhật bot theo `id` hoặc `code`: name, title, prompt, settings, notes. Văn bản bị quét bí mật; dính thì từ chối và nêu loại. Ghi chú và cài đặt hiện trên trang bot và nằm trong bản sao lưu của site. Bản sao lưu cũ không có hai mục này vẫn khôi phục được.
 - `POST /api/v1/backup/character` — tạo hoặc cập nhật nhân vật theo bot và tên, gồm ngoại hình và các trường giọng.
 - `POST /api/v1/backup/character/{id}/image` — JSON `{ url, kind }` hoặc multipart ảnh để server gửi lên imgbb.
 - `PUT /api/v1/backup/character/{id}/voice` — multipart MP3, M4A hoặc WAV, tối đa 4 MB.

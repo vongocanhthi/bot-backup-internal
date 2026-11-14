@@ -59,6 +59,8 @@ export type Bot = {
   name: string
   title: string
   prompt: string
+  notes: string | null
+  settings: Record<string, unknown>
   createdAt: string
   updatedAt: string
 }
