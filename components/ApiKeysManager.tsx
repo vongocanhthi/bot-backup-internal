@@ -1,11 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatDateTimeInSaigon } from '../lib/time'
 import type { ApiKeyRecord } from '../lib/types'
 import { CopyButton } from './CopyButton'
 import { sendJson } from './api'
+
+const REVEALED_KEY = 'qlk-revealed-api-key'
+
+function readRevealedKey(): { name: string; key: string } | null {
+  try {
+    const raw = sessionStorage.getItem(REVEALED_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { name?: string; key?: string }
+    if (!parsed.key) return null
+    return { name: parsed.name || '', key: parsed.key }
+  } catch {
+    return null
+  }
+}
 
 export function ApiKeysManager({
   csrf,
@@ -21,6 +35,9 @@ export function ApiKeysManager({
   const router = useRouter()
   const [error, setError] = useState('')
   const [created, setCreated] = useState<{ name: string; key: string } | null>(null)
+  useEffect(() => {
+    setCreated(readRevealedKey())
+  }, [])
   const [pendingKeys, setPendingKeys] = useState<ApiKeyRecord[]>([])
   const names = new Map(bots.map((bot) => [bot.id, bot.name]))
   const visibleKeys = [...pendingKeys.filter((item) => !keys.some((key) => key.id === item.id)), ...keys]
@@ -37,7 +54,9 @@ export function ApiKeysManager({
       })) as { key?: string; name?: string; id?: string; prefix?: string; botId?: string | null }
       if (!data.key) throw new Error('Máy chủ không trả khóa.')
       const name = data.name || String(form.get('name') || '')
-      setCreated({ name, key: data.key })
+      const revealed = { name, key: data.key }
+      setCreated(revealed)
+      sessionStorage.setItem(REVEALED_KEY, JSON.stringify(revealed))
       if (data.id && data.prefix) {
         setPendingKeys((current) => [
           {
@@ -104,7 +123,19 @@ export function ApiKeysManager({
           <p>
             {created.name}: <code>{created.key}</code>
           </p>
-          <CopyButton text={created.key} />
+          <div className="actions">
+            <CopyButton text={created.key} />
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                sessionStorage.removeItem(REVEALED_KEY)
+                setCreated(null)
+              }}
+            >
+              Đã lưu, ẩn khóa
+            </button>
+          </div>
         </section>
       ) : null}
       <div className="table-wrap card">

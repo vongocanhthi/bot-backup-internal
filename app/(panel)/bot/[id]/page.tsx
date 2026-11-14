@@ -32,7 +32,25 @@ export default async function BotPage({ params }: { params: Promise<{ id: string
         <p className="muted">{exported.bot.title}</p>
       </header>
       <section className="card">
-        {session?.user.isAdmin ? <BotEditor bot={exported.bot} csrf={session.csrfToken} /> : <pre className="export">{exported.bot.prompt}</pre>}
+        {session?.user.isAdmin ? (
+          <BotEditor bot={exported.bot} csrf={session.csrfToken} />
+        ) : (
+          <div className="stack">
+            <pre className="export">{exported.bot.prompt}</pre>
+            {exported.bot.notes ? (
+              <>
+                <h2>Ghi chú</h2>
+                <pre className="export">{exported.bot.notes}</pre>
+              </>
+            ) : null}
+            {Object.keys(exported.bot.settings).length > 0 ? (
+              <>
+                <h2>Cài đặt</h2>
+                <pre className="export">{JSON.stringify(exported.bot.settings, null, 2)}</pre>
+              </>
+            ) : null}
+          </div>
+        )}
       </section>
       <section className="card stack">
         <h2>Bản sao chép kèm nhân vật</h2>
@@ -54,6 +72,8 @@ export default async function BotPage({ params }: { params: Promise<{ id: string
                 {character.name}
               </Link>{' '}
               · {character.images.length} ảnh
+              {character.voice.name ? ` · giọng ${character.voice.name}` : ''}
+              {character.sourceFiles.length > 0 ? ` · ${character.sourceFiles.length} file gốc` : ''}
             </li>
           ))}
         </ul>

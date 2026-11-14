@@ -35,10 +35,17 @@ export type ExportCharacter = {
 }
 
 export function renderBotExport(
-  bot: { id: string; name: string; title: string; prompt: string },
+  bot: { id: string; name: string; title: string; prompt: string; notes?: string | null; settings?: Record<string, unknown> },
   characters: ExportCharacter[],
 ): string {
-  const lines = [bot.prompt.trimEnd(), '', '===== NHÂN VẬT =====', CHARACTER_INSTRUCTION, VOICE_INSTRUCTION, '']
+  const lines = [bot.prompt.trimEnd()]
+  if (bot.notes) {
+    lines.push('', '===== GHI CHÚ =====', bot.notes.trimEnd())
+  }
+  if (bot.settings && Object.keys(bot.settings).length > 0) {
+    lines.push('', '===== CÀI ĐẶT =====', JSON.stringify(bot.settings, null, 2))
+  }
+  lines.push('', '===== NHÂN VẬT =====', CHARACTER_INSTRUCTION, VOICE_INSTRUCTION, '')
   if (characters.length === 0) {
     lines.push('Chưa có nhân vật.')
     return `${lines.join('\n').trimEnd()}\n`

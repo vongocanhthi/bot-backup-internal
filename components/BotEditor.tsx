@@ -20,6 +20,8 @@ export function BotEditor({ bot, csrf }: { bot: Bot; csrf: string }) {
         name: form.get('name'),
         title: form.get('title'),
         prompt: form.get('prompt'),
+        notes: form.get('notes'),
+        settings: form.get('settings'),
       })
       router.refresh()
     } catch (caught) {
@@ -42,6 +44,18 @@ export function BotEditor({ bot, csrf }: { bot: Bot; csrf: string }) {
       <div className="field">
         <label htmlFor="bot-prompt">Nội dung cấu hình</label>
         <textarea id="bot-prompt" name="prompt" defaultValue={bot.prompt} required />
+      </div>
+      <div className="field">
+        <label htmlFor="bot-notes">Ghi chú</label>
+        <textarea id="bot-notes" name="notes" defaultValue={bot.notes ?? ''} />
+      </div>
+      <div className="field">
+        <label htmlFor="bot-settings">Cài đặt (JSON)</label>
+        <textarea
+          id="bot-settings"
+          name="settings"
+          defaultValue={Object.keys(bot.settings).length ? JSON.stringify(bot.settings, null, 2) : ''}
+        />
       </div>
       {error ? (
         <p className="error" role="alert">

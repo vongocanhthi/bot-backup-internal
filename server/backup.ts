@@ -43,7 +43,14 @@ type BackupPost = {
   service: string | null
   raw: unknown
 }
-type BackupBot = { id: string; name: string; title: string; prompt: string }
+type BackupBot = {
+  id: string
+  name: string
+  title: string
+  prompt: string
+  notes: string | null
+  settings: Record<string, unknown>
+}
 type BackupVoice = {
   name: string | null
   provider: string | null
@@ -87,6 +94,23 @@ export type BackupData = {
   bots: BackupBot[]
   characters: BackupCharacter[]
   characterImages: BackupImage[]
+}
+
+function readSettings(value: unknown, index: number): Record<string, unknown> {
+  if (typeof value === 'string') {
+    if (!value.trim()) return {}
+    try {
+      return readSettings(JSON.parse(value) as unknown, index)
+    } catch (error) {
+      if (error instanceof HttpError) throw error
+      throw new HttpError(`bots[${index}].settings không hợp lệ.`, 400)
+    }
+  }
+  if (value == null || value === '') return {}
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new HttpError(`bots[${index}].settings không hợp lệ.`, 400)
+  }
+  return value as Record<string, unknown>
 }
 
 function readVoice(value: unknown, index: number): BackupVoice {
@@ -216,6 +240,8 @@ export function parseBackup(value: unknown): BackupData {
       name: text(item.name, `bots[${index}].name`, 160),
       title: text(item.title, `bots[${index}].title`, 200),
       prompt: text(item.prompt, `bots[${index}].prompt`, 200_000),
+      notes: optional(item.notes, `bots[${index}].notes`, 8000),
+      settings: readSettings(item.settings, index),
     }
   })
   const botIds = new Set(bots.map((bot) => bot.id))
@@ -396,6 +422,8 @@ export async function exportBackup(db: Db): Promise<BackupData> {
       name: String(row.name),
       title: String(row.title),
       prompt: String(row.prompt),
+      notes: blank(row.notes == null ? null : String(row.notes)),
+      settings: readSettings(row.settings, 0),
     })),
     characters: characters.rows.map((row) => {
       const sample = sampleByCharacter.get(String(row.id))
@@ -485,12 +513,10 @@ export async function restoreBackup(db: Db, value: unknown, voices: StoredVoice[
     await tx.query(`DELETE FROM channels`)
     await tx.query(`DELETE FROM bots`)
     for (const bot of data.bots) {
-      await tx.query(`INSERT INTO bots (id, name, title, prompt) VALUES ($1, $2, $3, $4)`, [
-        bot.id,
-        bot.name,
-        bot.title,
-        bot.prompt,
-      ])
+      await tx.query(
+        `INSERT INTO bots (id, name, title, prompt, notes, settings) VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+        [bot.id, bot.name, bot.title, bot.prompt, bot.notes, JSON.stringify(bot.settings)],
+      )
     }
     const channelIds = new Map<string, string>()
     for (const channel of data.channels) {

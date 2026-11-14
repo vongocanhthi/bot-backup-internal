@@ -3,7 +3,7 @@ import { after, before, test } from 'node:test'
 import JSZip from 'jszip'
 import { backupZip, exportBackup, parseBackup, readBackupBundle, restoreBackup } from '../server/backup'
 import { createChannel, getChannelByCode } from '../server/channels'
-import { addCharacterImage, createBot, createCharacter, getSourceFile, getVoiceAudio, saveSourceFile, saveVoiceSample, updateCharacter } from '../server/content'
+import { addCharacterImage, createBot, createCharacter, getBot, getSourceFile, getVoiceAudio, saveSourceFile, saveVoiceSample, updateBot, updateCharacter } from '../server/content'
 import { ingestSnapshot } from '../server/snapshots'
 import { createTestDb } from './helpers'
 
@@ -134,4 +134,28 @@ test('backup zip keeps character source packages and older backups still parse',
   const saved = await getSourceFile(db, character.id, restored!.sourceFiles[0]!.id)
   assert.ok(saved)
   assert.deepEqual(Array.from(saved.bytes), Array.from(payload))
+})
+
+test('backup keeps bot notes and settings from an API upload', async () => {
+  const bot = await createBot(db, { id: 'bot-notes', name: 'Bot', title: 'Bot', prompt: 'Prompt.' })
+  await updateBot(db, bot.id, { notes: 'Ghi chú sao lưu', settings: { theme: 'cam' } })
+  const zipBytes = await backupZip(db)
+  const bundle = await readBackupBundle(zipBytes, 'sao-luu.zip')
+  await restoreBackup(db, bundle.data, bundle.voices, bundle.sources)
+  const restored = await getBot(db, bot.id)
+  assert.equal(restored?.notes, 'Ghi chú sao lưu')
+  assert.deepEqual(restored?.settings, { theme: 'cam' })
+  const old = parseBackup({
+    format: 'qlk-backup',
+    version: 2,
+    channels: [],
+    slots: [],
+    snapshots: [],
+    posts: [],
+    bots: [{ id: 'bot-cu', name: 'Cũ', title: 'Cũ', prompt: 'Không có cài đặt.' }],
+    characters: [],
+    characterImages: [],
+  })
+  assert.equal(old.bots[0]?.notes, null)
+  assert.deepEqual(old.bots[0]?.settings, {})
 })

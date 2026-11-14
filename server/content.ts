@@ -10,6 +10,21 @@ import { isBotId } from '../lib/slug'
 import { assertPublicHttpsUrl } from '../lib/urls'
 import type { Bot, Character, CharacterImage, CharacterSourceFile, CharacterVoice } from '../lib/types'
 
+function readSettingsInput(value: unknown): Record<string, unknown> {
+  if (value == null || value === '') return {}
+  if (typeof value === 'string') {
+    try {
+      return readSettingsInput(JSON.parse(value) as unknown)
+    } catch {
+      throw new HttpError('Cài đặt phải là JSON.', 400)
+    }
+  }
+  if (typeof value !== 'object' || Array.isArray(value)) throw new HttpError('Cài đặt phải là object JSON.', 400)
+  const json = JSON.stringify(value)
+  if (json.length > 20_000) throw new HttpError('Cài đặt quá dài.', 400)
+  return value as Record<string, unknown>
+}
+
 function textField(value: unknown, field: string, max: number, required = true): string {
   if (typeof value !== 'string') throw new HttpError(`${field} không hợp lệ.`, 400)
   const text = value.trim()
@@ -18,12 +33,26 @@ function textField(value: unknown, field: string, max: number, required = true):
   return text
 }
 
+function readSettings(value: unknown): Record<string, unknown> {
+  if (typeof value === 'string') {
+    try {
+      return readSettings(JSON.parse(value) as unknown)
+    } catch {
+      return {}
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return value as Record<string, unknown>
+}
+
 function mapBot(row: Record<string, unknown>): Bot {
   return {
     id: String(row.id),
     name: String(row.name),
     title: String(row.title),
     prompt: String(row.prompt),
+    notes: blank(row.notes == null ? null : String(row.notes)),
+    settings: readSettings(row.settings),
     createdAt: asIso(row.created_at) ?? new Date(0).toISOString(),
     updatedAt: asIso(row.updated_at) ?? new Date(0).toISOString(),
   }
@@ -78,16 +107,19 @@ export async function createBot(
 export async function updateBot(
   db: Db,
   id: string,
-  input: { name?: unknown; title?: unknown; prompt?: unknown },
+  input: { name?: unknown; title?: unknown; prompt?: unknown; notes?: unknown; settings?: unknown },
 ): Promise<Bot> {
   const existing = await getBot(db, id)
   if (!existing) throw new HttpError('Không tìm thấy bot.', 404)
   const name = input.name === undefined ? existing.name : textField(input.name, 'Tên', 160)
   const title = input.title === undefined ? existing.title : textField(input.title, 'Tiêu đề', 200)
   const prompt = input.prompt === undefined ? existing.prompt : textField(input.prompt, 'Nội dung', 200_000)
+  const notes =
+    input.notes === undefined ? existing.notes : input.notes == null || input.notes === '' ? null : textField(input.notes, 'Ghi chú', 8000, false)
+  const settings = input.settings === undefined ? existing.settings : readSettingsInput(input.settings)
   await db.query(
-    `UPDATE bots SET name = $1, title = $2, prompt = $3, updated_at = now() WHERE id = $4`,
-    [name, title, prompt, id],
+    `UPDATE bots SET name = $1, title = $2, prompt = $3, notes = $4, settings = $5::jsonb, updated_at = now() WHERE id = $6`,
+    [name, title, prompt, notes, JSON.stringify(settings), id],
   )
   const bot = await getBot(db, id)
   if (!bot || bot.id !== id) throw new HttpError('Mã bot bị đổi.', 500)
